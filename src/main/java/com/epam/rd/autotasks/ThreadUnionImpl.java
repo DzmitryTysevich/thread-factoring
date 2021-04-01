@@ -1,7 +1,9 @@
 package com.epam.rd.autotasks;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -10,6 +12,7 @@ public class ThreadUnionImpl implements ThreadUnion {
     private final String name;
     private final AtomicInteger integer = new AtomicInteger(0);
     private boolean shutdown;
+    private final Map<Thread, Throwable> exceptions = new HashMap<>();
 
     public ThreadUnionImpl(String name) {
         this.name = name;
@@ -59,7 +62,7 @@ public class ThreadUnionImpl implements ThreadUnion {
         synchronized (threads) {
             return threads.stream()
                     .filter(thread1 -> !thread1.isAlive())
-                    .map(thread1 -> new FinishedThreadResult(thread1.getName()))
+                    .map(thread1 -> new FinishedThreadResult(thread1.getName(), exceptions.get(thread1)))
                     .collect(Collectors.toList());
         }
     }
@@ -77,6 +80,6 @@ public class ThreadUnionImpl implements ThreadUnion {
     }
 
     private Thread.UncaughtExceptionHandler getUncaughtExceptionHandler() {
-        return (t, e) -> System.out.println(e);
+        return exceptions::put;
     }
 }

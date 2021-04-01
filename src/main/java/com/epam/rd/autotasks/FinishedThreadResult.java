@@ -28,13 +28,4 @@ public class FinishedThreadResult {
     public Throwable getThrowable() {
         return throwable;
     }
-
-    @Override
-    public String toString() {
-        return "FinishedThreadResult{" +
-                "threadName='" + threadName + '\'' +
-                ", finished=" + finished +
-                ", throwable=" + throwable +
-                '}';
-    }
 }

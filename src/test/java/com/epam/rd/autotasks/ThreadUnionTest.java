@@ -147,12 +147,12 @@ class ThreadUnionTest {
             assertEquals(shortThreadsCount, shortResults.size());
             assertEquals(expectedNames(unionName, 0, shortThreadsCount), resultThreadNames(shortResults));
 
-//            shortResults.stream()
-//                    .map(FinishedThreadResult::getFinished)
-//                    .forEach(finished -> assertAll(
-//                            () -> assertFalse(finished.isBefore(beforeStart)),
-//                            () -> assertFalse(finished.isAfter(afterShortThreadsFinish))
-//                    ));
+            shortResults.stream()
+                    .map(FinishedThreadResult::getFinished)
+                    .forEach(finished -> assertAll(
+                            () -> assertFalse(finished.isBefore(beforeStart)),
+                            () -> assertFalse(finished.isAfter(afterShortThreadsFinish))
+                    ));
 
             assertEquals(exceptionsToThrow, collectThrowables(shortResults));
 
