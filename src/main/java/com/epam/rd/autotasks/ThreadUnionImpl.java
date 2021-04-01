@@ -15,10 +15,6 @@ public class ThreadUnionImpl implements ThreadUnion {
         this.name = name;
     }
 
-    private static void uncaughtException(Thread th, Throwable ex) {
-        System.out.println("" + ex);
-    }
-
     @Override
     public int totalSize() {
         return threads.size();
@@ -61,11 +57,10 @@ public class ThreadUnionImpl implements ThreadUnion {
     @Override
     public List<FinishedThreadResult> results() {
         synchronized (threads) {
-            List<FinishedThreadResult> s = threads.stream()
+            return threads.stream()
                     .filter(thread1 -> !thread1.isAlive())
                     .map(thread1 -> new FinishedThreadResult(thread1.getName()))
                     .collect(Collectors.toList());
-            return s;
         }
     }
 
@@ -82,6 +77,6 @@ public class ThreadUnionImpl implements ThreadUnion {
     }
 
     private Thread.UncaughtExceptionHandler getUncaughtExceptionHandler() {
-        return ThreadUnionImpl::uncaughtException;
+        return (t, e) -> System.out.println(e);
     }
 }
