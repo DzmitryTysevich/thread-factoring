@@ -15,6 +15,10 @@ public class ThreadUnionImpl implements ThreadUnion {
         this.name = name;
     }
 
+    private static void uncaughtException(Thread th, Throwable ex) {
+        System.out.println("" + ex);
+    }
+
     @Override
     public int totalSize() {
         return threads.size();
@@ -40,7 +44,13 @@ public class ThreadUnionImpl implements ThreadUnion {
 
     @Override
     public void awaitTermination() {
-
+        threads.forEach(thread -> {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     @Override
@@ -51,20 +61,27 @@ public class ThreadUnionImpl implements ThreadUnion {
     @Override
     public List<FinishedThreadResult> results() {
         synchronized (threads) {
-            return threads.stream()
+            List<FinishedThreadResult> s = threads.stream()
                     .filter(thread1 -> !thread1.isAlive())
                     .map(thread1 -> new FinishedThreadResult(thread1.getName()))
                     .collect(Collectors.toList());
+            return s;
         }
     }
 
     @Override
     public Thread newThread(Runnable r) {
         if (!isShutdown()) {
+            Thread.UncaughtExceptionHandler exceptionHandler = getUncaughtExceptionHandler();
             Thread thread = new Thread(r, name + "-worker-" + integer.getAndIncrement());
+            thread.setUncaughtExceptionHandler(exceptionHandler);
             threads.add(thread);
             return thread;
         }
         throw new IllegalStateException();
+    }
+
+    private Thread.UncaughtExceptionHandler getUncaughtExceptionHandler() {
+        return ThreadUnionImpl::uncaughtException;
     }
 }
