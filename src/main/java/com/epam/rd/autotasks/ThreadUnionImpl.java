@@ -1,18 +1,17 @@
 package com.epam.rd.autotasks;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 public class ThreadUnionImpl implements ThreadUnion {
-    private final List<Thread> threads = new ArrayList<>();
+    private final List<Thread> threads = Collections.synchronizedList(new ArrayList<>());
+    private final List<FinishedThreadResult> results = Collections.synchronizedList(new ArrayList<>());
+    private final AtomicInteger counter = new AtomicInteger(0);
     private final String name;
-    private final AtomicInteger integer = new AtomicInteger(0);
+    private final String WORKER = "-worker-";
     private boolean shutdown;
-    private final Map<Thread, Throwable> exceptions = new HashMap<>();
 
     public ThreadUnionImpl(String name) {
         this.name = name;
@@ -43,13 +42,15 @@ public class ThreadUnionImpl implements ThreadUnion {
 
     @Override
     public void awaitTermination() {
-        threads.forEach(thread -> {
-            try {
-                thread.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
+        synchronized (threads) {
+            threads.forEach(thread -> {
+                try {
+                    thread.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            });
+        }
     }
 
     @Override
@@ -59,27 +60,27 @@ public class ThreadUnionImpl implements ThreadUnion {
 
     @Override
     public List<FinishedThreadResult> results() {
-        synchronized (threads) {
-            return threads.stream()
-                    .filter(thread1 -> !thread1.isAlive())
-                    .map(thread1 -> new FinishedThreadResult(thread1.getName(), exceptions.get(thread1)))
-                    .collect(Collectors.toList());
-        }
+        return results;
     }
 
     @Override
     public Thread newThread(Runnable r) {
-        if (!isShutdown()) {
-            Thread.UncaughtExceptionHandler exceptionHandler = getUncaughtExceptionHandler();
-            Thread thread = new Thread(r, name + "-worker-" + integer.getAndIncrement());
-            thread.setUncaughtExceptionHandler(exceptionHandler);
-            threads.add(thread);
-            return thread;
+        if (isShutdown()) {
+            throw new IllegalStateException();
         }
-        throw new IllegalStateException();
+        Thread thread = getThread(r);
+        thread.setUncaughtExceptionHandler((t, e) -> results.add(new FinishedThreadResult(t.getName(), e)));
+        threads.add(thread);
+        return thread;
     }
 
-    private Thread.UncaughtExceptionHandler getUncaughtExceptionHandler() {
-        return exceptions::put;
+    private Thread getThread(Runnable r) {
+        return new Thread(r, name + WORKER + counter.getAndIncrement()) {
+            @Override
+            public void run() {
+                super.run();
+                results.add(new FinishedThreadResult(this.getName()));
+            }
+        };
     }
 }
